@@ -64,18 +64,16 @@ module.exports = (env, argv) => {
         // Emscripten JS files define a global. With `exports-loader` we can
         // load these files correctly (provided the global’s name is the same
         // as the file name).
-        // {
-        //   test: /lg2\.js$/,
-        //   loader: "exports-loader",
-        //   options: {
-        //     type: "commonjs",
-        //     exports: ["lg"],
-        //   },
-        //   type: "asset/resource",
-        // },
         {
           test: /lg2\.js$/,
-          type: "asset/resource",
+          loader: "string-replace-loader",
+          options: {
+            search: /[\w-\.\/]*\.wasm/g,
+            replace() {
+              return `wasm-git/lg2.wasm`;
+            },
+          },
+          type: "asset/source",
         },
         {
           test: /src\/index\.js$/,
@@ -83,34 +81,24 @@ module.exports = (env, argv) => {
           options: {
             search: 'require("wasm-git/lg2")',
             replace(match, p1, offset, string) {
-              // console.log("MATCH", match, "P1", p1, "OFFSET", offset, "STRING", string);
-              // const replace = `\
-              // () => {
-              //   return typeof window === "undefined" \
-              //     ? "() => {const r={};const l=require(require('wasm-git/lg2'));setTimeout(r.onload,1)return r}()" \
-              //     : "const s=document.createElement('script');s.src=require('wasm-git/lg2');document.head.appendChild(s)" \
-              // }()`;
-              const web = `(() => {
-                const s = document.createElement("script");
-                s.src = require("wasm-git/lg2");
-                document.head.appendChild(s);
-                const o = {};
-                s.onload = () => {o.ready(Module);delete window.Module};
-                return o;
-              })()`;
+              const web = `\
+              (() => {
+                const mod = require("wasm-git/lg2");
+                eval(mod);
+                return Module;
+              })()
+              `;
               return web.replace(/\n/g, "");
             },
           },
         },
-
         // wasm files should not be processed but just be emitted and we want
         // to have their public URL.
         {
           test: /lg2\.wasm$/,
-          type: "javascript/auto",
-          loader: "file-loader",
-          options: {
-            publicPath: "dist/",
+          type: "asset/resource",
+          generator: {
+            filename: "wasm-git/lg2.wasm",
           },
         },
       ],
