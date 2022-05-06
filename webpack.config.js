@@ -31,24 +31,6 @@ module.exports = (env, argv) => {
     performance: {
       hints: false,
     },
-    resolve: {
-      alias: {
-        // "git-web": path.resolve(__dirname, "utils/browser-cdk.js"),
-        // "aws-sdk": path.resolve(__dirname, "utils/browser-aws.js"),
-        // fs: "memfs",
-        // esbuild: "esbuild-wasm",
-      },
-      fallback: {
-        // process: require.resolve("process/browser"),
-        // assert: require.resolve("assert/"),
-        // util: require.resolve("util/"),
-        // path: require.resolve("path-browserify"),
-        // stream: require.resolve("stream-browserify"),
-        // os: require.resolve("os-browserify/browser"),
-        // crypto: require.resolve("crypto-browserify"),
-        // zlib: require.resolve("browserify-zlib"),
-      },
-    },
     devServer: {
       static: [
         { directory: path.join(__dirname, "public") },
@@ -58,9 +40,19 @@ module.exports = (env, argv) => {
       compress: true,
       port: 9000,
     },
-
     module: {
       rules: [
+        // {
+        //   test: /wasm-git.*$/,
+        //   use: [
+        //     {
+        //       loader: path.resolve("./webpack/loaders/wasm-loader.js"),
+        //       options: {
+        //         /* ... */
+        //       },
+        //     },
+        //   ],
+        // },
         // Emscripten JS files define a global. With `exports-loader` we can
         // load these files correctly (provided the global’s name is the same
         // as the file name).
@@ -69,9 +61,7 @@ module.exports = (env, argv) => {
           loader: "string-replace-loader",
           options: {
             search: /[\w-\.\/]*\.wasm/g,
-            replace() {
-              return `wasm-git/lg2.wasm`;
-            },
+            replace: "wasm-git/lg2.wasm",
           },
           type: "asset/source",
         },
