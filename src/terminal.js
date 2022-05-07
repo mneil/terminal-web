@@ -26,6 +26,7 @@ class Terminal extends EventEmitter2 {
     this.#term.write("Get \x1B[1;3;31mrekt\x1B[0m $ ");
 
     this.#term.onKey((evt) => {
+      console.log(evt);
       if (evt.domEvent.code === "Enter") {
         return this.enter();
       }
@@ -38,7 +39,9 @@ class Terminal extends EventEmitter2 {
       if (evt.domEvent.code === "ArrowDown") {
         return this.toHistory(1);
       }
-      console.log(evt);
+      if (evt.domEvent.code === "KeyL" && evt.domEvent.ctrlKey) {
+        return this.#term.clear();
+      }
       this.line += evt.key;
       this.#term.write(evt.key);
     });
@@ -71,9 +74,7 @@ class Terminal extends EventEmitter2 {
     if (!this.#tempHistory) {
       this.#tempHistory = this.line;
     }
-    for (let i = 0; i < this.line.length; i++) {
-      this.backspace(); // clear current line
-    }
+    this.clearLine();
     this.#hitoryPos += direction;
     if (this.#hitoryPos < -this.history.length) {
       // at the beginning
@@ -88,11 +89,22 @@ class Terminal extends EventEmitter2 {
     this.line = this.history[this.history.length + this.#hitoryPos];
     this.#term.write(this.line);
   }
+  /**
+   * Clears the current line
+   */
+  clearLine() {
+    this.#term.write("\x1b[2K\r");
+    this.#term.write(this.#newline);
+  }
 
-  backspace() {
+  backspace(times = 1) {
     if (this.line) {
       this.line = this.line.slice(0, this.line.length - 1);
+      const clear = new Array(times).fill("\b \b");
+      // this.#term.write(clear.join(""));
+      // this.#term.write("\b \b");
       this.#term.write("\b \b");
+      // }
     }
   }
 
