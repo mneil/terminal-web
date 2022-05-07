@@ -69,17 +69,21 @@ module.exports = (env, argv) => {
           test: /src\/index\.js$/,
           loader: "string-replace-loader",
           options: {
-            search: 'require("wasm-git/lg2")',
-            replace(match, p1, offset, string) {
-              const web = `\
+            multiple: [
+              {
+                search: 'require("wasm-git/lg2")',
+                replace() {
+                  const web = `\
               (() => {
                 const mod = require("wasm-git/lg2");
                 eval(mod);
                 return Module;
               })()
               `;
-              return web.replace(/\n/g, "");
-            },
+                  return web.replace(/\n/g, "");
+                },
+              },
+            ],
           },
         },
         // wasm files should not be processed but just be emitted and we want
@@ -90,6 +94,12 @@ module.exports = (env, argv) => {
           generator: {
             filename: "wasm-git/lg2.wasm",
           },
+        },
+
+        // xterm styles
+        {
+          test: /\.css$/i,
+          use: ["style-loader", "css-loader"],
         },
       ],
     },
