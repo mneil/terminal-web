@@ -66,7 +66,7 @@ module.exports = (env, argv) => {
           type: "asset/source",
         },
         {
-          test: /src\/index\.js$/,
+          test: /src\/terminal\/applications\/git\.js$/,
           loader: "string-replace-loader",
           options: {
             multiple: [
@@ -75,6 +75,10 @@ module.exports = (env, argv) => {
                 replace() {
                   const web = `\
               (() => {
+                var Module = {
+                  print(txt) {Module.stdout && Module.stdout(txt)},
+                  printErr(txt) {Module.stderr && Module.stderr(txt)},
+                };
                 const mod = require("wasm-git/lg2");
                 eval(mod);
                 return Module;

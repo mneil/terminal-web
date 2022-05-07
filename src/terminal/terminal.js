@@ -8,22 +8,36 @@ const EventEmitter2 = require("eventemitter2");
  * Emits more complete events than the addon interfaces gives you access to for building integrations.
  * Emits:
  *  - command: When user enters a command. Get the full current line the user entered
+ *
+ * Listens:
+ *  - command.response: Send data to write to the terminal
  */
 class Terminal extends EventEmitter2 {
   #maxHistory = 1000;
   #hitoryPos = 0;
   #tempHistory = "";
-  #newline = "$ ";
+  #newline = "\x1B[1;36m$ \x1B[0m";
   #term;
+  #addons = [];
   line = "";
   history = [];
+
+  get xterm() {
+    return this.#term;
+  }
+
+  set newline(value) {
+    this.#newline = value;
+  }
+
   constructor(el) {
     super();
     this.#term = new xterm.Terminal({
       cursorBlink: "block",
     });
     this.#term.open(el);
-    this.#term.write("Get \x1B[1;3;31mrekt\x1B[0m $ ");
+    this.#term.write(this.#newline);
+    this.on("command.response", this.writeResponse);
 
     this.#term.onKey((evt) => {
       console.log(evt);
@@ -53,7 +67,13 @@ class Terminal extends EventEmitter2 {
     this.#tempHistory = "";
     // emit the command
     const [app, ...args] = this.line.split(" ");
-    this.emit("command", { app, args, line: this.line });
+    const addon = this.#addons.filter((addon) => addon.application === app);
+    if (addon.length) {
+      this.emit(app, { args, line: this.line }); // helper specific emit
+    } else {
+      this.commandNotFound();
+    }
+    this.emit("command", { app, args, line: this.line }); // global emit for other objects
     // store non-empty lines in this.history
     this.line.trim() && this.history.push(this.line);
     // FIFO queue hitory items after max this.history
@@ -89,6 +109,11 @@ class Terminal extends EventEmitter2 {
     this.line = this.history[this.history.length + this.#hitoryPos];
     this.#term.write(this.line);
   }
+
+  commandNotFound() {
+    this.#term.writeln("");
+    this.#term.write(`${this.line}: command not found`);
+  }
   /**
    * Clears the current line
    */
@@ -97,19 +122,36 @@ class Terminal extends EventEmitter2 {
     this.#term.write(this.#newline);
   }
 
-  backspace(times = 1) {
+  backspace() {
     if (this.line) {
       this.line = this.line.slice(0, this.line.length - 1);
-      const clear = new Array(times).fill("\b \b");
-      // this.#term.write(clear.join(""));
-      // this.#term.write("\b \b");
       this.#term.write("\b \b");
-      // }
     }
   }
 
+  writeResponse(data) {
+    this.#term.writeln("");
+    this.#term.write(data);
+  }
+
+  dispose() {
+    this.#addons.forEach((addon) => addon.dispose());
+    this.#term.dispose();
+  }
+
+  /**
+   * Add an addon to xterm. Except instead of the term
+   * we activate with an instance of this terminal
+   *
+   * Addons must have a specific shape
+   *
+   * @param {} addon
+   * @see https://xtermjs.org/docs/guides/using-addons/
+   */
   loadAddon(addon) {
-    this.#term.loadAddon(addon);
+    this.#addons.push(addon);
+    addon.activate(this);
+    // this.#term.loadAddon(addon);
   }
 }
 
