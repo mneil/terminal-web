@@ -1,10 +1,20 @@
 {
   "name": "git-web",
+  "scripts": {
+    "build": "webpack",
+    "test": "mocha"
+  },
   "devDependencies": {
+    "chai": "^4.3.6",
+    "chai-as-promised": "^7.1.1",
     "css-loader": "^6.7.1",
     "eventemitter2": "^6.4.5",
     "exports-loader": "^3.1.0",
+    "express": "^4.18.1",
     "file-loader": "^6.2.0",
+    "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
+    "puppeteer": "^13.7.0",
     "string-replace-loader": "^3.1.0",
     "style-loader": "^3.3.1",
     "wasm-git": "^0.0.8",
@@ -12,5 +22,38 @@
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.7.4",
     "xterm": "^4.18.0"
+  },
+  "nyc": {
+    "reporter": [
+      "html",
+      "text-summary"
+    ],
+    "include": [
+      "src/*.test.js",
+      "src/**/*.test.js"
+    ],
+    "all": true,
+    "clean": true,
+    "cache": false,
+    "instrument": false,
+    "checkCoverage": true,
+    "statements": 95,
+    "functions": 95,
+    "branches": 80,
+    "lines": 95
+  },
+  "mocha": {
+    "bail": false,
+    "timeout": "30s",
+    "full-trace": true,
+    "inline-diffs": true,
+    "check-leaks": true,
+    "global": [
+      "chai",
+      "page"
+    ],
+    "file": [
+      "./test/setup.js"
+    ]
   }
 }
