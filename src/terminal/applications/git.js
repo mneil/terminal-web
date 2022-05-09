@@ -1,27 +1,28 @@
 const lg = require("wasm-git/lg2");
 require("wasm-git/lg2.wasm");
 
-const INITIALIZED = new Promise((resolve, reject) => {
-  lg.onRuntimeInitialized = () => {
-    const FS = lg.FS;
-    const MEMFS = FS.filesystems.MEMFS;
+const INITIALIZED = async () => {
+  return new Promise((resolve, reject) => {
+    lg.onRuntimeInitialized = () => {
+      const FS = lg.FS;
+      const MEMFS = FS.filesystems.MEMFS;
 
-    FS.mkdir("/app");
-    FS.mount(MEMFS, {}, "/app");
-    FS.chdir("/app");
+      FS.mkdir("/app");
+      FS.mount(MEMFS, {}, "/app");
+      FS.chdir("/app");
 
-    FS.writeFile("/home/web_user/.gitconfig", "[user]\n" + "name = Test User\n" + "email = test@example.com");
-    resolve();
-  };
-});
-
+      FS.writeFile("/home/web_user/.gitconfig", "[user]\n" + "name = Test User\n" + "email = test@example.com");
+      resolve();
+    };
+  });
+};
 class GitAddon {
   #disposables = [];
   application = "git";
   #terminal;
 
   static async create() {
-    await INITIALIZED;
+    await INITIALIZED();
     return new GitAddon();
   }
   /**

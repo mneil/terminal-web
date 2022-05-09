@@ -115,7 +115,7 @@ class Terminal extends EventEmitter2 {
     if (addon.length) {
       this.emit(app, { args, line: this.line }); // helper specific emit
     } else {
-      this.commandNotFound();
+      this.commandNotFound(app);
     }
     this.emit("command", { app, args, line: this.line }); // global emit for other objects
     // store non-empty lines in this.#history
@@ -161,9 +161,9 @@ class Terminal extends EventEmitter2 {
    * you can also receive the command.noFound event and call clearLine
    * to remove the error message for best UX.
    */
-  commandNotFound() {
+  commandNotFound(app) {
     this.#term.writeln("");
-    const msg = `${this.line}: command not found`;
+    const msg = `${app}: command not found`;
     this.#term.write(msg);
     this.emit("command.notFound", msg);
   }
