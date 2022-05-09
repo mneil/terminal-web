@@ -16,6 +16,17 @@
         const terminalElement = document.getElementById("terminal");
         const term = await terminal.init(terminalElement);
         globalThis.term = term;
+
+        term.xterm.element.style.padding = "5px 5px 5px 10px";
+        term.xterm.resize(term.xterm.cols, term.xterm.rows);
+
+        // runn commands on startup
+        const commands = [
+          //"git init .",
+        ];
+        for (command of commands) {
+          `${command}\r`.split("").forEach((key) => term.write({ key }));
+        }
       }
       playground();
     </script>
