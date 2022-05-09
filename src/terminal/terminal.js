@@ -103,7 +103,7 @@ class Terminal extends EventEmitter2 {
             });
           return false;
         }
-        if (ev.button == 0) {
+        if (ev.button == 0 && this.#term.hasSelection()) {
           // left click
           navigator.clipboard.writeText(this.#term.getSelection());
           this.#term.clearSelection();
