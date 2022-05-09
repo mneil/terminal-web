@@ -13,7 +13,7 @@ const BROWSER = !NODE;
 
 app.use(express.static(path.resolve(__dirname, "..", "dist")));
 app.use(express.static(path.resolve(__dirname, "..", "public")));
-// chai.use(require("deep-equal-in-any-order"));
+chai.use(require("deep-equal-in-any-order"));
 chai.use(require("chai-as-promised"));
 
 /** @returns {typeof window.terminal} */
