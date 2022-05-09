@@ -1,0 +1,23 @@
+<!-- this file is loaded by puppeteer before tests are executed. it acts as global setup inside puppeteer -->
+<!-- <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1000.0.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/cdk-web@latest/dist/cdk-web.min.js"></script> -->
+<!DOCTYPE html5>
+<html>
+  <title>terminal-web</title>
+  <head> </head>
+  <body>
+    <div id="terminal"></div>
+    <script src="terminal-web.js"></script>
+    <script>
+      async function playground() {
+        if (window.navigator.userAgent === "automated-test") {
+          return;
+        }
+        const terminalElement = document.getElementById("terminal");
+        const term = await terminal.init(terminalElement);
+        globalThis.term = term;
+      }
+      playground();
+    </script>
+  </body>
+</html>
