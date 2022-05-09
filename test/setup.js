@@ -16,23 +16,20 @@ app.use(express.static(path.resolve(__dirname, "..", "public")));
 // chai.use(require("deep-equal-in-any-order"));
 chai.use(require("chai-as-promised"));
 
-// /** @returns {typeof window.CDK} */
-// function importCdk() {
-//   let CDK;
-//   if (BROWSER) {
-//     // in BROWSER mode, bundle is loaded in puppeteer
-//     // and native cdk is used as ground truth for tests
-//     CDK = { require };
-//   } else {
-//     // in NODE mode we directly require the bundle in node to
-//     // verify it's also cross compatible and collect coverage
-//     CDK = require("../dist/cdk-web");
-//   }
-//   return CDK;
-// }
+/** @returns {typeof window.terminal} */
+function importTerminal() {
+  let terminal;
+  if (BROWSER) {
+  } else {
+    // in NODE mode we directly require the bundle in node to
+    // verify it's also cross compatible and collect coverage
+    terminal = require("../dist/terminal-web");
+  }
+  return terminal;
+}
 
 globalThis.chai = chai;
-// globalThis.CDK = importCdk();
+globalThis.terminal = importTerminal();
 
 let browser = null;
 let server = null;
@@ -40,11 +37,11 @@ let hostUrl = "";
 
 before(async function () {
   if (BROWSER) {
-    browser = await puppeteer.launch();
+    browser = await puppeteer.launch({ args: ["--user-agent=automated-test"] });
     const page = await browser.newPage();
     await new Promise((resolve) => {
       server = app.listen(() => resolve());
-      hostUrl = `http://localhost:${server.address().port}/`;
+      hostUrl = `http://localhost:${server.address().port}/?test=true`;
     });
     await page.goto(hostUrl);
     globalThis.page = page;

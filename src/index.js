@@ -1,10 +1,15 @@
 const { Terminal, applications } = require("./terminal");
 
-const init = async () => {
-  const term = new Terminal(document.getElementById("terminal"));
+const init = async (el) => {
+  const term = new Terminal(el);
   Promise.all(Object.values(applications).map(async (app) => term.loadAddon(await app.create())));
+  return term;
 };
 
-init().then(() => {
-  console.log("ready");
-});
+module.exports = {
+  init,
+};
+
+// init().then(() => {
+//   console.log("ready");
+// });

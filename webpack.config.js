@@ -14,19 +14,12 @@ module.exports = (env, argv) => {
       : { devtool: "inline-source-map" }),
     output: {
       path: path.join(__dirname, "dist"),
-      filename: "git-web.js",
+      filename: "terminal-web.js",
       library: {
-        name: "git-web",
+        name: "terminal",
         type: "umd",
       },
       globalObject: `(typeof self !== 'undefined' ? self : this)`,
-    },
-    externals: {
-      ...(argv.mode === "production"
-        ? {
-            "git-web": "git",
-          }
-        : {}),
     },
     performance: {
       hints: false,
@@ -35,7 +28,7 @@ module.exports = (env, argv) => {
       static: [
         { directory: path.join(__dirname, "public") },
         // { directory: path.join(__dirname, "node_modules/aws-sdk/dist") },
-        // { directory: path.join(__dirname, "node_modules/git-web/dist") },
+        // { directory: path.join(__dirname, "node_modules/terminal-web/dist") },
       ],
       compress: true,
       port: 9000,

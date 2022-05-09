@@ -7,6 +7,17 @@
   <head> </head>
   <body>
     <div id="terminal"></div>
-    <script src="git-web.js"></script>
+    <script src="terminal-web.js"></script>
+    <script>
+      async function playground() {
+        if (window.navigator.userAgent === "automated-test") {
+          return;
+        }
+        const terminalElement = document.getElementById("terminal");
+        const term = await terminal.init(terminalElement);
+        globalThis.term = term;
+      }
+      playground();
+    </script>
   </body>
 </html>

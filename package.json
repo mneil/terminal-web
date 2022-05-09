@@ -1,5 +1,5 @@
 {
-  "name": "git-web",
+  "name": "terminal-web",
   "scripts": {
     "build": "webpack",
     "test": "mocha"
@@ -44,7 +44,7 @@
   },
   "mocha": {
     "bail": false,
-    "timeout": "30s",
+    "timeout": "2s",
     "full-trace": true,
     "inline-diffs": true,
     "check-leaks": true,

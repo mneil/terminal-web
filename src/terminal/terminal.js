@@ -13,17 +13,47 @@ const EventEmitter2 = require("eventemitter2");
  *  - command.response: Send data to write to the terminal
  */
 class Terminal extends EventEmitter2 {
+  /**
+   * Number of commands to store in history
+   */
   #maxHistory = 1000;
+  /**
+   * Current position of the history when user is pressing Up/Down
+   */
   #hitoryPos = 0;
+  /**
+   * Actual history of commands. Lines are added to the history when Enter is pressed
+   */
+  #history = [];
+  /**
+   * Contents of the current line when user starts going through the history.
+   * For example, I start to type `$ foo` then press Up. When user presses
+   * down we can give them `$ foo` again even though `$ foo` is not yet in history.
+   */
   #tempHistory = "";
+  /**
+   * Start of every new line when user presses Enter
+   */
   #newline = "\x1B[1;36m$ \x1B[0m";
+  /**
+   * Reference to the underlying xterm object
+   */
   #term;
+  /**
+   * Registered addons
+   */
   #addons = [];
+  /**
+   * Contents of the current line
+   */
   line = "";
-  history = [];
 
   get xterm() {
     return this.#term;
+  }
+
+  get history() {
+    return this.#history;
   }
 
   set newline(value) {
@@ -40,30 +70,44 @@ class Terminal extends EventEmitter2 {
     this.on("command.response", this.writeResponse);
 
     this.#term.onKey((evt) => {
-      console.log(evt);
-      if (evt.domEvent.code === "Enter") {
-        return this.enter();
-      }
-      if (evt.domEvent.code === "Backspace") {
-        return this.backspace();
-      }
-      if (evt.domEvent.code === "ArrowUp") {
-        return this.toHistory(-1);
-      }
-      if (evt.domEvent.code === "ArrowDown") {
-        return this.toHistory(1);
-      }
-      if (evt.domEvent.code === "KeyL" && evt.domEvent.ctrlKey) {
-        return this.#term.clear();
-      }
-      this.line += evt.key;
-      this.#term.write(evt.key);
+      this.write({ key: evt.key });
     });
   }
 
+  /**
+   * Write to the terminal. This helper method is basically the xterm write
+   * but handles specific keycodes for history, backspace, enter, etc...
+   *
+   * @param {object} evt
+   * @param {string} evt.key
+   * @returns
+   */
+  write(evt) {
+    if (evt.key === "\r") {
+      return this.enter();
+    }
+    if (evt.key === "x7F") {
+      return this.backspace();
+    }
+    if (evt.key === "\x1B[A") {
+      return this.toHistory(-1);
+    }
+    if (evt.key === "\x1B[B") {
+      return this.toHistory(1);
+    }
+    if (evt.key === "\f") {
+      return this.#term.clear();
+    }
+    this.line += evt.key;
+    this.#term.write(evt.key);
+  }
+  /**
+   * Enter, newline, what to do when users press enter
+   */
   enter() {
     // reset history scrolling
     this.#hitoryPos = 0;
+    // clear temporary history
     this.#tempHistory = "";
     // emit the command
     const [app, ...args] = this.line.split(" ");
@@ -74,10 +118,10 @@ class Terminal extends EventEmitter2 {
       this.commandNotFound();
     }
     this.emit("command", { app, args, line: this.line }); // global emit for other objects
-    // store non-empty lines in this.history
-    this.line.trim() && this.history.push(this.line);
-    // FIFO queue hitory items after max this.history
-    this.history.length > this.#maxHistory && this.history.splice(-this.#maxHistory, this.#maxHistory);
+    // store non-empty lines in this.#history
+    this.line.trim() && this.#history.push(this.line);
+    // FIFO queue hitory items after max this.#history
+    this.#history.length > this.#maxHistory && this.#history.splice(-this.#maxHistory, this.#maxHistory);
     // reset the current line
     this.line = "";
     this.#term.writeln("");
@@ -96,9 +140,9 @@ class Terminal extends EventEmitter2 {
     }
     this.clearLine();
     this.#hitoryPos += direction;
-    if (this.#hitoryPos < -this.history.length) {
+    if (this.#hitoryPos < -this.#history.length) {
       // at the beginning
-      this.#hitoryPos = -this.history.length;
+      this.#hitoryPos = -this.#history.length;
     }
     if (this.#hitoryPos > -1) {
       // at the end - restore user's temporary work
@@ -106,13 +150,22 @@ class Terminal extends EventEmitter2 {
       this.line = this.#tempHistory;
       return this.#term.write(this.line);
     }
-    this.line = this.history[this.history.length + this.#hitoryPos];
+    this.line = this.#history[this.#history.length + this.#hitoryPos];
     this.#term.write(this.line);
   }
-
+  /**
+   * Handle command not found. Command not found is ran when
+   * user presses enter and no addons match the first argument
+   * on the current line. If you are listening to the global
+   * command events to add your own commands outside of addons then
+   * you can also receive the command.noFound event and call clearLine
+   * to remove the error message for best UX.
+   */
   commandNotFound() {
     this.#term.writeln("");
-    this.#term.write(`${this.line}: command not found`);
+    const msg = `${this.line}: command not found`;
+    this.#term.write(msg);
+    this.emit("command.notFound", msg);
   }
   /**
    * Clears the current line
@@ -121,19 +174,27 @@ class Terminal extends EventEmitter2 {
     this.#term.write("\x1b[2K\r");
     this.#term.write(this.#newline);
   }
-
+  /**
+   * Clear previous character on the current line
+   */
   backspace() {
     if (this.line) {
       this.line = this.line.slice(0, this.line.length - 1);
       this.#term.write("\b \b");
     }
   }
-
+  /**
+   * Write data to the terminal outside of history. This command is
+   * useful for pasting multi-line returns from running commands.
+   * @param {*} data
+   */
   writeResponse(data) {
     this.#term.writeln("");
     this.#term.write(data);
   }
-
+  /**
+   * Destroy this instance of the terminal and all registered addons
+   */
   dispose() {
     this.#addons.forEach((addon) => addon.dispose());
     this.#term.dispose();
@@ -151,7 +212,6 @@ class Terminal extends EventEmitter2 {
   loadAddon(addon) {
     this.#addons.push(addon);
     addon.activate(this);
-    // this.#term.loadAddon(addon);
   }
 }
 
