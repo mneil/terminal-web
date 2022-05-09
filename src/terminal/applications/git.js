@@ -1,3 +1,4 @@
+globalThis.importScripts = () => {};
 const lg = require("wasm-git/lg2");
 require("wasm-git/lg2.wasm");
 
