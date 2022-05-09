@@ -72,6 +72,47 @@ class Terminal extends EventEmitter2 {
     this.#term.onKey((evt) => {
       this.write({ key: evt.key });
     });
+
+    this.#setupPasting(el);
+  }
+
+  #setupPasting(el) {
+    // prevent context menu
+    el.addEventListener(
+      "contextmenu",
+      (ev) => {
+        ev.preventDefault();
+        return false;
+      },
+      false
+    );
+    el.addEventListener(
+      "mouseup",
+      (ev) => {
+        ev.preventDefault();
+        if (ev.button == 2) {
+          // right click
+          navigator.clipboard
+            .readText()
+            .then((text) => {
+              console.log(text.split(""));
+              text.split("").forEach((key) => this.write({ key }));
+            })
+            .catch((err) => {
+              console.error("Failed to read clipboard contents: ", err);
+            });
+          return false;
+        }
+        if (ev.button == 0) {
+          // left click
+          navigator.clipboard.writeText(this.#term.getSelection());
+          this.#term.clearSelection();
+          return;
+        }
+        return false;
+      },
+      false
+    );
   }
 
   /**
@@ -83,7 +124,7 @@ class Terminal extends EventEmitter2 {
    * @returns
    */
   write(evt) {
-    if (evt.key === "\r") {
+    if (evt.key === "\r" || evt.key === "\n") {
       return this.enter();
     }
     if (evt.key === "x7F") {
@@ -96,7 +137,8 @@ class Terminal extends EventEmitter2 {
       return this.toHistory(1);
     }
     if (evt.key === "\f") {
-      return this.#term.clear();
+      this.#term.clear();
+      return this.clearLine();
     }
     this.line += evt.key;
     this.#term.write(evt.key);
@@ -110,14 +152,16 @@ class Terminal extends EventEmitter2 {
     // clear temporary history
     this.#tempHistory = "";
     // emit the command
-    const [app, ...args] = this.line.split(" ");
-    const addon = this.#addons.filter((addon) => addon.application === app);
-    if (addon.length) {
-      this.emit(app, { args, line: this.line }); // helper specific emit
-    } else {
-      this.commandNotFound(app);
+    if (this.line.trim()) {
+      const [app, ...args] = this.line.split(" ");
+      const addon = this.#addons.filter((addon) => addon.application === app);
+      if (addon.length) {
+        this.emit(app, { args, line: this.line }); // helper specific emit
+      } else {
+        this.commandNotFound(app);
+      }
+      this.emit("command", { app, args, line: this.line }); // global emit for other objects
     }
-    this.emit("command", { app, args, line: this.line }); // global emit for other objects
     // store non-empty lines in this.#history
     this.line.trim() && this.#history.push(this.line);
     // FIFO queue hitory items after max this.#history
