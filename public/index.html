@@ -23,6 +23,8 @@
         // runn commands on startup
         const commands = [
           //"git init .",
+          //"git clone https://git-codecommit.us-east-1.amazonaws.com/v1/repos/taxonomy taxonomy",
+          //"git clone origin main",
         ];
         for (command of commands) {
           `${command}\r`.split("").forEach((key) => term.write({ key }));

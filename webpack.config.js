@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 
 module.exports = (env, argv) => {
@@ -25,30 +26,15 @@ module.exports = (env, argv) => {
       hints: false,
     },
     devServer: {
-      static: [
-        { directory: path.join(__dirname, "public") },
-        // { directory: path.join(__dirname, "node_modules/aws-sdk/dist") },
-        // { directory: path.join(__dirname, "node_modules/terminal-web/dist") },
-      ],
+      static: [{ directory: path.join(__dirname, "public") }],
       compress: true,
       port: 9000,
     },
     module: {
       rules: [
-        // {
-        //   test: /wasm-git.*$/,
-        //   use: [
-        //     {
-        //       loader: path.resolve("./webpack/loaders/wasm-loader.js"),
-        //       options: {
-        //         /* ... */
-        //       },
-        //     },
-        //   ],
-        // },
-        // Emscripten JS files define a global. With `exports-loader` we can
-        // load these files correctly (provided the global’s name is the same
-        // as the file name).
+        // Replace the string "lg2.wasm" in file lg2.js with a different "wasm-git/lg2.wasm"
+        // This allows us to move the lg2.wasm file into a sub directory of dist to ensure
+        // multiple wasm files don't collide.
         {
           test: /lg2\.js$/,
           loader: "string-replace-loader",
@@ -58,33 +44,21 @@ module.exports = (env, argv) => {
           },
           type: "asset/source",
         },
+        // Replace the require call to "wasm-git/lg2" with our own internal module
         {
-          test: /src\/terminal\/applications\/git\.js$/,
+          test: /src\/terminal\/applications\/git\/worker\.js$/,
           loader: "string-replace-loader",
           options: {
             multiple: [
               {
                 search: 'require("wasm-git/lg2")',
-                replace() {
-                  const web = `\
-              (() => {
-                var Module = {
-                  print(txt) {Module.stdout && Module.stdout(txt)},
-                  printErr(txt) {Module.stderr && Module.stderr(txt)},
-                };
-                const mod = require("wasm-git/lg2");
-                eval(mod);
-                return Module;
-              })()
-              `;
-                  return web.replace(/\n/g, "");
-                },
+                replace: fs.readFileSync(path.resolve(__dirname, "webpack", "modules", "git.js"), "utf-8"),
               },
             ],
           },
         },
         // wasm files should not be processed but just be emitted and we want
-        // to have their public URL.
+        // to have their public URL. Move the wasm file to "wasm-git/lg2.wasm"
         {
           test: /lg2\.wasm$/,
           type: "asset/resource",
@@ -92,8 +66,7 @@ module.exports = (env, argv) => {
             filename: "wasm-git/lg2.wasm",
           },
         },
-
-        // xterm styles
+        // load xterm styles
         {
           test: /\.css$/i,
           use: ["style-loader", "css-loader"],

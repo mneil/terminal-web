@@ -44,6 +44,14 @@ class Terminal extends EventEmitter2 {
    */
   #addons = [];
   /**
+   * Resolves a running command
+   */
+  #resolveRunningCommand = () => {};
+  /**
+   * Store if a command is currently running or not
+   */
+  #runningApp = Promise.resolve();
+  /**
    * Contents of the current line
    */
   line = "";
@@ -74,6 +82,20 @@ class Terminal extends EventEmitter2 {
     });
 
     this.#setupPasting(el);
+  }
+
+  /**
+   * Holds state of a running command. When a command is ran
+   * we can set this value to a promise that must resolve
+   */
+  #runningCommand(app) {
+    if (this.#runningApp && !app) {
+      return this.#runningApp;
+    }
+    this.#runningApp = new Promise((resolve) => {
+      this.#resolveRunningCommand = resolve;
+    });
+    return this.#runningApp;
   }
 
   #setupPasting(el) {
@@ -127,7 +149,7 @@ class Terminal extends EventEmitter2 {
     if (evt.key === "\r" || evt.key === "\n") {
       return this.enter();
     }
-    if (evt.key === "x7F") {
+    if (evt.key === "\x7F") {
       return this.backspace();
     }
     if (evt.key === "\x1B[A") {
@@ -156,20 +178,23 @@ class Terminal extends EventEmitter2 {
       const [app, ...args] = this.line.split(" ");
       const addon = this.#addons.filter((addon) => addon.application === app);
       if (addon.length) {
+        this.#runningCommand(app);
         this.emit(app, { args, line: this.line }); // helper specific emit
       } else {
         this.commandNotFound(app);
       }
       this.emit("command", { app, args, line: this.line }); // global emit for other objects
     }
-    // store non-empty lines in this.#history
-    this.line.trim() && this.#history.push(this.line);
-    // FIFO queue hitory items after max this.#history
-    this.#history.length > this.#maxHistory && this.#history.splice(-this.#maxHistory, this.#maxHistory);
-    // reset the current line
-    this.line = "";
-    this.#term.writeln("");
-    this.#term.write(this.#newline);
+    this.#runningCommand().then(() => {
+      // store non-empty lines in this.#history
+      this.line.trim() && this.#history.push(this.line);
+      // FIFO queue hitory items after max this.#history
+      this.#history.length > this.#maxHistory && this.#history.splice(-this.#maxHistory, this.#maxHistory);
+      // reset the current line
+      this.line = "";
+      this.#term.writeln("");
+      this.#term.write(this.#newline);
+    });
   }
   /**
    * toHistory takes an integer -1 or 1 to advance or rewind
@@ -235,6 +260,7 @@ class Terminal extends EventEmitter2 {
   writeResponse(data) {
     this.#term.writeln("");
     this.#term.write(data);
+    this.#resolveRunningCommand();
   }
   /**
    * Destroy this instance of the terminal and all registered addons
