@@ -1,4 +1,3 @@
-const fs = require("fs");
 const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
 
@@ -56,19 +55,20 @@ module.exports = (env, argv) => {
           },
           { from: require.resolve(`${pyodidePackage}/pyodide.asm.data`), to: "pyodide/pyodide.asm.data" },
           { from: require.resolve(`${pyodidePackage}/pyodide.asm.wasm`), to: "pyodide/pyodide.asm.wasm" },
+          { from: require.resolve(`wasm-git/lg2.wasm`), to: "wasm-git/lg2.wasm" },
         ],
       }),
     ],
     module: {
-      // do not parse pyodide
-      noParse: /pyodide\/.+\.js$/,
+      // do not parse pyodide/pyodide.js or git-wasm/lg2.js
+      noParse: /pyodide\/pyodide\.js|wasm-git\/lg2\.js/,
       rules: [
         /**
          * BEGIN PYTHON
          */
         // Remove pyodide globals. They are not necessary when using pyodide in webpack
         {
-          test: /pyodide\/.+\.js$/,
+          test: /pyodide\/pyodide\.js$/,
           loader: "string-replace-loader",
           options: {
             multiple: [
@@ -87,35 +87,31 @@ module.exports = (env, argv) => {
         // This allows us to move the lg2.wasm file into a sub directory of dist to ensure
         // multiple wasm files don't collide.
         {
-          test: /lg2\.js$/,
-          loader: "string-replace-loader",
-          options: {
-            search: /[\w-\.\/]*\.wasm/g,
-            replace: "wasm-git/lg2.wasm",
-          },
-          type: "asset/source",
-        },
-        // Replace the require call to "wasm-git/lg2" with our own internal module
-        {
-          test: /src\/terminal\/applications\/git\/worker\.js$/,
-          loader: "string-replace-loader",
-          options: {
-            multiple: [
-              {
-                search: 'require("wasm-git/lg2")',
-                replace: fs.readFileSync(path.resolve(__dirname, "webpack", "modules", "git.js"), "utf-8"),
+          test: /wasm-git\/lg2\.js$/,
+          use: [
+            {
+              loader: "string-replace-loader",
+              options: {
+                search: /[\w-\.\/]*\.wasm/g,
+                replace: "wasm-git/lg2.wasm",
               },
-            ],
-          },
-        },
-        // wasm files should not be processed but just be emitted and we want
-        // to have their public URL. Move the wasm file to "wasm-git/lg2.wasm"
-        {
-          test: /lg2\.wasm$/,
-          type: "asset/resource",
-          generator: {
-            filename: "wasm-git/lg2.wasm",
-          },
+            },
+            {
+              loader: "string-replace-loader",
+              options: {
+                search: 'var Module=typeof Module!="undefined"?Module:{}',
+                replace:
+                  "const Module = {print(txt) {Module.stdout && Module.stdout(txt);},printErr(txt) {Module.stderr && Module.stderr(txt);}}",
+              },
+            },
+            {
+              loader: "exports-loader",
+              options: {
+                type: "commonjs",
+                exports: { name: "Module", alias: "lg" },
+              },
+            },
+          ],
         },
         /**
          * END GIT

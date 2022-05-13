@@ -1,5 +1,4 @@
-const lg = require("wasm-git/lg2");
-require("wasm-git/lg2.wasm");
+const { lg } = require("wasm-git/lg2");
 
 self.onmessage = ({ data: { cmd, args } }) => {
   if (cmd === "initialize") {

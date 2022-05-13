@@ -1,18 +1,5 @@
 const { loadPyodide } = require("pyodide");
 
-// self.onmessage = ({ data: { cmd, args } }) => {
-//   if (cmd === "initialize") {
-//     return initialize.then(() => {
-//       self.postMessage({
-//         initialize: true,
-//       });
-//     });
-//   }
-//   if (cmd === "python") {
-//     pyodide.runPython("1 + 2");
-//   }
-// };
-
 class PythonAddon {
   #disposables = [];
   application = "python";
@@ -38,6 +25,7 @@ class PythonAddon {
     };
     const pyodide = await loadPyodide(config);
     internalPyodide.pyodide = pyodide;
+    await pyodide.loadPackage(["micropip"]);
     return internalPyodide;
   }
 
@@ -56,10 +44,22 @@ class PythonAddon {
   activate(terminal) {
     this.#terminal = terminal;
     this.#terminal.on(this.application, (evt) => {
-      this.#pyodide.runPythonAsync("print('hello world')").then(() => {
-        this.#terminal.emit("command.response", "");
-      });
+      if (evt.line.startsWith("python -c")) {
+        this.runPython(evt.args.slice(1));
+      }
     });
+  }
+
+  async runPython(args) {
+    const code = args
+      .join(" ")
+      .slice(1, -1)
+      .split(/\\r|\\n/g)
+      .join("\n");
+
+    // loading packages is not working. Silent failure
+    await this.#pyodide.loadPackagesFromImports(code, console.log, console.log).then(() => {});
+    await this.#pyodide.runPythonAsync(code);
   }
   /**
    * Required for addon. Clean up memory
