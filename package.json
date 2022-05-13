@@ -1,12 +1,15 @@
 {
   "name": "terminal-web",
   "scripts": {
+    "postinstall": "node ./patch.js",
+    "dev": "webpack serve --mode development",
     "build": "webpack",
     "test": "mocha"
   },
   "devDependencies": {
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
+    "copy-webpack-plugin": "^10.2.4",
     "css-loader": "^6.7.1",
     "debug": "^4.3.4",
     "deep-equal-in-any-order": "^1.1.17",
@@ -17,6 +20,7 @@
     "mocha": "^10.0.0",
     "nyc": "^15.1.0",
     "puppeteer": "^13.7.0",
+    "pyodide": "^0.20.1-alpha.2",
     "string-replace-loader": "^3.1.0",
     "style-loader": "^3.3.1",
     "wasm-git": "^0.0.8",
