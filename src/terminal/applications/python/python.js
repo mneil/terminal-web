@@ -45,8 +45,9 @@ class PythonAddon {
     this.#terminal = terminal;
     this.#terminal.on(this.application, (evt) => {
       if (evt.line.startsWith("python -c")) {
-        this.runPython(evt.args.slice(1));
+        return this.runPython(evt.args.slice(1));
       }
+      this.#terminal.emit("command.response", "command not implemented");
     });
   }
 
